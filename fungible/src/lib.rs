@@ -9,7 +9,7 @@ use frame_support::{
     decl_module, decl_storage, decl_event, decl_error, dispatch, ensure,
     Parameter,
 };
-use system::ensure_signed;
+use frame_system::ensure_signed;
 
 #[cfg(test)]
 mod mock;
@@ -17,13 +17,13 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-pub trait Trait: system::Trait {
+pub trait Trait: frame_system::Trait {
     /// The overarching event type.
-    type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+    type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 
     type TokenBalance: Parameter + Member + AtLeast32Bit + Default + Copy
         + MaybeSerializeDeserialize;
-    
+
     type TokenId: Parameter + Member + AtLeast32Bit + Default + Copy
         + MaybeSerializeDeserialize;
 }
@@ -31,9 +31,9 @@ pub trait Trait: system::Trait {
 decl_event!(
     pub enum Event<T>
     where
-        AccountId = <T as system::Trait>::AccountId,
-        TokenBalance = <T as Trait>::TokenBalance,
-        TokenId = <T as Trait>::TokenId,
+        <T as frame_system::Trait>::AccountId,
+        <T as Trait>::TokenBalance,
+        <T as Trait>::TokenId,
     {
         NewToken(TokenId, AccountId, TokenBalance),
         /// <from, to, amount>
@@ -59,13 +59,13 @@ decl_error! {
 
 decl_storage!(
     trait Store for Module<T: Trait> as Fungible {
-        TokenCount get(token_count): T::TokenId;
+        TokenCount get(fn token_count): T::TokenId;
 
         /// ERC20 compatible.
         /// Maps (id, owner, spender) => amount.
-        Allowance get(allowance): map hasher(opaque_blake2_256) (T::TokenId, T::AccountId, T::AccountId) => T::TokenBalance;
-        Balances get(balance_of): map hasher(opaque_blake2_256) (T::TokenId, T::AccountId) => T::TokenBalance;
-        TotalSupply get(total_supply): map hasher(opaque_blake2_256) T::TokenId => T::TokenBalance;
+        Allowance get(fn allowance): map hasher(opaque_blake2_256) (T::TokenId, T::AccountId, T::AccountId) => T::TokenBalance;
+        Balances get(fn balance_of): map hasher(opaque_blake2_256) (T::TokenId, T::AccountId) => T::TokenBalance;
+        TotalSupply get(fn total_supply): map hasher(opaque_blake2_256) T::TokenId => T::TokenBalance;
     }
 );
 
@@ -76,10 +76,11 @@ decl_module!(
 
         fn deposit_event() = default;
 
+        #[weight = 0]
         pub fn debug_create_token(
             origin,
             #[compact] total_supply: T::TokenBalance,
-        ) -> dispatch::DispatchResult 
+        ) -> dispatch::DispatchResult
         {
             let sender = ensure_signed(origin)?;
 
@@ -88,6 +89,7 @@ decl_module!(
             Ok(())
         }
 
+        #[weight = 0]
         pub fn transfer(
             origin,
             id: T::TokenId,
@@ -103,6 +105,7 @@ decl_module!(
             Self::do_transfer(id, sender.clone(), recipient.clone(), amount)
         }
 
+        #[weight = 0]
         pub fn transfer_from(
             origin,
             id: T::TokenId,
@@ -128,6 +131,7 @@ decl_module!(
             Ok(())
         }
 
+        #[weight = 0]
         pub fn approve(
             origin,
             id: T::TokenId,
@@ -149,6 +153,7 @@ decl_module!(
             Ok(())
         }
 
+        #[weight = 0]
         pub fn debug_mint(
             origin,
             id: T::TokenId,
@@ -160,7 +165,8 @@ decl_module!(
             Self::mint(id, to, amount)
         }
 
-        pub fn debug_burn(origin, id: T::TokenId, from: T::AccountId, amount: T::TokenBalance) 
+        #[weight = 0]
+        pub fn debug_burn(origin, id: T::TokenId, from: T::AccountId, amount: T::TokenBalance)
             -> dispatch::DispatchResult
         {
             ensure_signed(origin)?;
@@ -205,13 +211,13 @@ impl<T: Trait> Module<T> {
         // TODO: Watch for overflow here. PUZZLE: Find a good solution that doesn't
         // need to make this function return a result, which may be an anti-pattern.
         let next_id = id.checked_add(&One::one()).unwrap();
-        
+
         <Balances<T>>::insert((id, who.clone()), total_supply);
         <TotalSupply<T>>::insert(id, total_supply);
         <TokenCount<T>>::put(next_id);
 
         Self::deposit_event(RawEvent::NewToken(id, who, total_supply));
-    
+
         id
     }
 

@@ -22,7 +22,7 @@ parameter_types! {
 	pub const MaximumBlockLength: u32 = 2 * 1024;
 	pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
 }
-impl system::Trait for Test {
+impl frame_system::Trait for Test {
 	type Origin = Origin;
 	type Call = ();
 	type Index = u64;
@@ -38,10 +38,16 @@ impl system::Trait for Test {
 	type MaximumBlockLength = MaximumBlockLength;
 	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
-	type ModuleToIndex = ();
+	type PalletInfo = ();
 	type AccountData = pallet_balances::AccountData<u64>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
+	type BaseCallFilter = ();
+	type DbWeight = ();
+	type BlockExecutionWeight = ();
+	type ExtrinsicBaseWeight = ();
+	type MaximumExtrinsicWeight = ();
+	type SystemWeightInfo = ();
 }
 
 parameter_types! {
@@ -53,7 +59,9 @@ impl pallet_balances::Trait for Test {
 	type Event = ();
 	type DustRemoval = ();
 	type ExistentialDeposit = ExistentialDeposit;
-	type AccountStore = system::Module<Test>;
+	type AccountStore = frame_system::Module<Test>;
+	type WeightInfo = ();
+	type MaxLocks = ();
 }
 
 impl Trait for Test {
@@ -75,7 +83,7 @@ pub type Swaps = Module<Test>;
 // This function basically just builds a genesis storage key/value store according to
 // our desired mockup.
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	let mut t = system::GenesisConfig::default().build_storage::<Test>().unwrap().into();
+	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into();
 	pallet_balances::GenesisConfig::<Test> {
 		balances: vec![
 			(1, 10000),

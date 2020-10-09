@@ -10,7 +10,7 @@ use sp_runtime::traits::{
 use frame_support::{decl_module, decl_storage, decl_event, decl_error, dispatch,
 	ensure, Parameter, traits::{Currency, ExistenceRequirement},
 };
-use system::ensure_signed;
+use frame_system::ensure_signed;
 
 use pallet_fungible::{self as fungible};
 
@@ -31,16 +31,16 @@ pub struct Swap<AccountId, TokenId> {
 	account: AccountId,
 }
 
-type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as system::Trait>::AccountId>>::Balance;
+type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
 
 /// The swap's module id, used for deriving sovereign account IDs.
 const MODULE_ID: ModuleId = ModuleId(*b"mtg/swap");
 
 /// The pallet's configuration trait.
-pub trait Trait: system::Trait + fungible::Trait {
+pub trait Trait: frame_system::Trait + fungible::Trait {
 
 	/// The overarching event type.
-    type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+    type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
     
     type SwapId: Parameter + Member + AtLeast32Bit + Default + Copy
 		+ MaybeSerializeDeserialize;
@@ -51,9 +51,9 @@ pub trait Trait: system::Trait + fungible::Trait {
 // Storage items for the Swap pallet.
 decl_storage! {
 	trait Store for Module<T: Trait> as SwapStorage {
-		TokenToSwap get(token_to_swap): map hasher(opaque_blake2_256) T::TokenId => T::SwapId;
-		Swaps get(swaps): map hasher(opaque_blake2_256) T::SwapId => Option<Swap<T::AccountId, T::TokenId>>;
-		SwapCount get(swap_count): T::SwapId;
+		TokenToSwap get(fn token_to_swap): map hasher(opaque_blake2_256) T::TokenId => T::SwapId;
+		Swaps get(fn swaps): map hasher(opaque_blake2_256) T::SwapId => Option<Swap<T::AccountId, T::TokenId>>;
+		SwapCount get(fn swap_count): T::SwapId;
 	}
 }
 
@@ -61,7 +61,7 @@ decl_storage! {
 decl_event!(
 	pub enum Event<T> 
 	where
-		AccountId = <T as system::Trait>::AccountId,
+		AccountId = <T as frame_system::Trait>::AccountId,
 		BalanceOf = BalanceOf<T>,
 		Id = <T as Trait>::SwapId,
 		TokenBalance = <T as fungible::Trait>::TokenBalance
@@ -126,6 +126,7 @@ decl_module! {
 
 		fn deposit_event() = default;
 		
+		#[weight = 0]
 		pub fn create_swap(origin,
 			token_id: T::TokenId,
 		) -> dispatch::DispatchResult
@@ -156,16 +157,17 @@ decl_module! {
 			Ok(())
 		}
         
-        pub fn add_liquidity(origin,
+		#[weight = 0]
+		pub fn add_liquidity(origin,
 			swap_id: T::SwapId,				// ID of swap to access.
 			currency_amount: BalanceOf<T>,  // Amount of base currency to lock.
-            min_liquidity: T::TokenBalance,	// Min amount of swap shares to create.
+			min_liquidity: T::TokenBalance,	// Min amount of swap shares to create.
 			max_tokens: T::TokenBalance,	// Max amount of tokens to input.
-            deadline: T::BlockNumber,		// When to invalidate the transaction.
-        ) -> dispatch::DispatchResult
-        {
+			deadline: T::BlockNumber,		// When to invalidate the transaction.
+		) -> dispatch::DispatchResult
+		{
 			// Deadline is to prevent front-running (more of a problem on Ethereum).
-			let now = system::Module::<T>::block_number();
+			let now = frame_system::Module::<T>::block_number();
 			ensure!(deadline > now, Error::<T>::Deadline);
 
 			let who = ensure_signed(origin.clone())?;
@@ -207,6 +209,7 @@ decl_module! {
 			}
 		}
 		
+		#[weight = 0]
 		pub fn remove_liquidity(origin,
 			swap_id: T::SwapId,
 			shares_to_burn: T::TokenBalance, 
@@ -215,7 +218,7 @@ decl_module! {
 			deadline: T::BlockNumber,
 		) -> dispatch::DispatchResult
 		{
-			let now = system::Module::<T>::block_number();
+			let now = frame_system::Module::<T>::block_number();
 			ensure!(deadline > now, Error::<T>::Deadline);
 
 			let who = ensure_signed(origin.clone())?;
@@ -253,6 +256,7 @@ decl_module! {
 		///
 		/// User specifies the exact amount of currency to spend and the minimum
 		/// tokens to be returned.
+		#[weight = 0]
 		pub fn currency_to_tokens_input(origin,
 			swap_id: T::SwapId,
 			currency: BalanceOf<T>,
@@ -261,7 +265,7 @@ decl_module! {
 			recipient: T::AccountId,
 		) -> dispatch::DispatchResult
 		{
-			let now = system::Module::<T>::block_number();
+			let now = frame_system::Module::<T>::block_number();
 			ensure!(deadline > now, Error::<T>::Deadline);
 
 			let buyer = ensure_signed(origin)?;
@@ -291,6 +295,7 @@ decl_module! {
 		///
 		/// User specifies the maximum currency to spend and the exact amount of
 		/// tokens to be returned.
+		#[weight = 0]
 		pub fn currency_to_tokens_output(origin,
 			swap_id: T::SwapId,
 			tokens_bought: T::TokenBalance,
@@ -299,7 +304,7 @@ decl_module! {
 			recipient: T::AccountId,
 		) -> dispatch::DispatchResult
 		{
-			let now = system::Module::<T>::block_number();
+			let now = frame_system::Module::<T>::block_number();
 			ensure!(deadline >= now, Error::<T>::Deadline);
 
 			let buyer = ensure_signed(origin)?;
@@ -329,6 +334,7 @@ decl_module! {
 		///
 		/// The user specifies exact amount of tokens sold and minimum amount of
 		/// currency that is returned.
+		#[weight = 0]
 		pub fn tokens_to_currency_input(origin,
 			swap_id: T::SwapId,
 			tokens_sold: T::TokenBalance,
@@ -337,7 +343,7 @@ decl_module! {
 			recipient: T::AccountId,
 		) -> dispatch::DispatchResult
 		{
-			let now = system::Module::<T>::block_number();
+			let now = frame_system::Module::<T>::block_number();
 			ensure!(deadline >= now, Error::<T>::Deadline);
 
 			let buyer = ensure_signed(origin)?;
@@ -367,6 +373,7 @@ decl_module! {
 		///
 		/// The user specifies the maximum tokens to swap and the exact
 		/// currency to be returned.
+		#[weight = 0]
 		pub fn tokens_to_currency_output(origin,
 			swap_id:  T::SwapId,
 			currency_bought: BalanceOf<T>,
@@ -375,7 +382,7 @@ decl_module! {
 			recipient: T::AccountId,
 		) -> dispatch::DispatchResult
 		{
-			let now = system::Module::<T>::block_number();
+			let now = frame_system::Module::<T>::block_number();
 			ensure!(deadline >= now, Error::<T>::Deadline);
 
 			let buyer = ensure_signed(origin)?;
