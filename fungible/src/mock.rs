@@ -24,7 +24,7 @@ parameter_types! {
     pub const ExistentialDeposit: u64 = 1;
 }
 
-impl system::Trait for Test {
+impl frame_system::Trait for Test {
     type Origin = Origin;
     type Call = ();
     type Index = u64;
@@ -40,10 +40,16 @@ impl system::Trait for Test {
     type MaximumBlockLength = MaximumBlockLength;
     type AvailableBlockRatio = AvailableBlockRatio;
     type Version = ();
-    type ModuleToIndex = ();
+    type PalletInfo = ();
     type AccountData = ();
     type OnNewAccount = ();
     type OnKilledAccount = ();
+    type BaseCallFilter = ();
+    type DbWeight = ();
+    type BlockExecutionWeight = ();
+    type ExtrinsicBaseWeight = ();
+    type MaximumExtrinsicWeight = ();
+    type SystemWeightInfo = ();
 }
 
 impl Trait for Test {
@@ -61,10 +67,10 @@ impl Trait for Test {
 //     type AccountStore = System;
 // }
 
-// type System = system::Module<Test>;
+// type System = frame_system::Module<Test>;
 // type Balances = pallet_balances::Module<Test>;
 pub type FungiblePallet = Module<Test>;
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
-    system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
+    frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
 }
